@@ -6,7 +6,6 @@ import json
 import os
 import numpy as np
 from typing import List
-from openai.embeddings_utils import get_embedding
 
 # Set API keys
 openai.api_key = "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"
