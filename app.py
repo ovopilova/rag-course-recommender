@@ -8,7 +8,7 @@ import numpy as np
 from typing import List
 
 # Set API keys
-openai.api_key = "YugVJMZ4s0WdGTkhk4LOcQUpjx1vChKz0YbshGP6wc3O_qO46R7XttHAePQnyyjowXyxXvIENjT3BlbkFJul-UNgqjoIyi_JaqoTUGxI9bzhY-xwRLCYgk22JR0rwNIlFdJhZUEXVde5CTd18Bx4FC6aarwA"
+openai.api_key = "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"
 
 
 
