@@ -13,7 +13,6 @@ openai.api_key = "sk-proj-YugVJMZ4s0WdGTkhk4LOcQUpjx1vChKz0YbshGP6wc3O_qO46R7Xtt
 
 
 # Укажите API-ключ OpenAI (в Streamlit Cloud добавьте его в Secrets)
-openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # Курсы для рекомендации
 courses = [
