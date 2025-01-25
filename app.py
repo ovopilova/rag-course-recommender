@@ -8,7 +8,7 @@ from typing import List
 from openai.embeddings_utils import get_embedding
 
 # Set API keys
-openai.api_key = os.getenv("OPENAI_API_KEY")  # Замените на ваш ключ
+openai.api_key = "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"
 
 # Step 1: Load course data (Mockup for now, replace with actual parsing)
 def load_course_data():
