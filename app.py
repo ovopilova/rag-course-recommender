@@ -4,58 +4,60 @@ import faiss
 import requests
 import json
 import os
+import numpy as np
 from typing import List
 from openai.embeddings_utils import get_embedding
 
 # Set API keys
 openai.api_key = "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"
 
-# Step 1: Load course data (Mockup for now, replace with actual parsing)
-def load_course_data():
-    return [
-        {"title": "Data Science с нуля", "description": "Курс для начинающих изучать Data Science."},
-        {"title": "Анализ данных в Python", "description": "Подробное изучение анализа данных с использованием Python."},
-        {"title": "Машинное обучение", "description": "Основы машинного обучения: теория и практика."},
-        {"title": "Продвинутый SQL", "description": "Углубленный курс по работе с базами данных."},
-        {"title": "Нейронные сети", "description": "Создание и обучение нейронных сетей на практике."},
-    ]
 
-# Step 2: Generate embeddings for courses
-def generate_embeddings(course_data: List[dict]):
-    course_descriptions = [course["description"] for course in course_data]
-    embeddings = [
-        get_embedding(description, engine="text-embedding-ada-002")
-        for description in course_descriptions
-    ]
-    return embeddings
+# Список курсов
+courses = [
+    {"name": "Машинное обучение", "description": "Изучите алгоритмы машинного обучения, такие как регрессия, деревья решений и кластеризация."},
+    {"name": "SQL для аналитиков", "description": "Освойте SQL, чтобы работать с базами данных и анализировать данные."},
+    {"name": "Нейронные сети", "description": "Изучите основы нейронных сетей и разработайте свои первые модели на Python."},
+    {"name": "Анализ данных в Python", "description": "Научитесь анализировать данные с помощью pandas, numpy и matplotlib."},
+    {"name": "Продуктовая аналитика", "description": "Изучите основные метрики продуктовой аналитики и научитесь строить отчёты."}
+]
 
-# Step 3: Build FAISS index
-def build_faiss_index(embeddings):
-    dimension = len(embeddings[0])  # Dimension of embeddings
+# Получение эмбеддингов с помощью OpenAI
+def get_embedding(text, model="text-embedding-ada-002"):
+    response = openai.Embedding.create(input=text, model=model)
+    return np.array(response['data'][0]['embedding'])
+
+# Создание векторной базы данных
+def build_vector_db(courses):
+    descriptions = [course["description"] for course in courses]
+    embeddings = [get_embedding(desc) for desc in descriptions]
+
+    dimension = len(embeddings[0])
     index = faiss.IndexFlatL2(dimension)
     index.add(np.array(embeddings).astype('float32'))
-    return index
 
-# Step 4: Find the best course match
-def find_best_match(user_query, course_data, index):
-    query_embedding = get_embedding(user_query, engine="text-embedding-ada-002")
-    distances, indices = index.search(np.array([query_embedding]).astype('float32'), k=1)
-    return course_data[indices[0][0]], distances[0][0]
+    return index, embeddings
 
-# Streamlit App
+# Рекомендация курса
+def recommend_course(user_query, index, courses):
+    query_embedding = get_embedding(user_query).astype('float32').reshape(1, -1)
+    distances, indices = index.search(query_embedding, 1)
+    recommended_course = courses[indices[0][0]]
+    return recommended_course, distances[0][0]
+
+# Создание интерфейса Streamlit
 st.title("Рекомендатор курсов")
-st.write("Введите запрос, чтобы найти подходящий курс на Karpov.Courses")
+st.write("Введите свои интересы, и мы подберём для вас подходящий курс!")
 
-# Load and process course data
-course_data = load_course_data()
-embeddings = generate_embeddings(course_data)
-index = build_faiss_index(embeddings)
+user_input = st.text_input("Что вы хотите изучить?", placeholder="Например, машинное обучение, SQL, анализ данных...")
 
-# User input
-user_query = st.text_input("Опишите, что вы хотите изучить:")
-if user_query:
-    best_match, distance = find_best_match(user_query, course_data, index)
-    st.write("Рекомендуемый курс:")
-    st.subheader(best_match["title"])
-    st.write(best_match["description"])
-    st.write(f"Релевантность: {1 - distance:.2f}")
+if user_input:
+    with st.spinner("Ищем подходящий курс..."):
+        # Построение векторной базы
+        index, _ = build_vector_db(courses)
+
+        # Рекомендация курса
+        recommended_course, distance = recommend_course(user_input, index, courses)
+
+        # Вывод результата
+        st.success(f"Мы рекомендуем вам курс: **{recommended_course['name']}**")
+        st.write(f"Описание: {recommended_course['description']}")
