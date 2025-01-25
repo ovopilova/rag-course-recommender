@@ -11,21 +11,25 @@ from typing import List
 openai.api_key = "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"
 
 
-# Список курсов
+
+# Укажите API-ключ OpenAI (в Streamlit Cloud добавьте его в Secrets)
+openai.api_key = st.secrets["OPENAI_API_KEY"]
+
+# Курсы для рекомендации
 courses = [
-    {"name": "Машинное обучение", "description": "Изучите алгоритмы машинного обучения, такие как регрессия, деревья решений и кластеризация."},
-    {"name": "SQL для аналитиков", "description": "Освойте SQL, чтобы работать с базами данных и анализировать данные."},
-    {"name": "Нейронные сети", "description": "Изучите основы нейронных сетей и разработайте свои первые модели на Python."},
-    {"name": "Анализ данных в Python", "description": "Научитесь анализировать данные с помощью pandas, numpy и matplotlib."},
-    {"name": "Продуктовая аналитика", "description": "Изучите основные метрики продуктовой аналитики и научитесь строить отчёты."}
+    {"name": "Машинное обучение", "description": "Изучите базовые алгоритмы машинного обучения: регрессия, деревья решений, кластеризация."},
+    {"name": "SQL для аналитиков", "description": "Научитесь писать SQL-запросы, работать с базами данных и анализировать данные."},
+    {"name": "Нейронные сети", "description": "Разработайте свои первые нейронные сети и изучите их архитектуру."},
+    {"name": "Анализ данных в Python", "description": "Научитесь анализировать данные с использованием pandas, numpy и matplotlib."},
+    {"name": "Продуктовая аналитика", "description": "Изучите метрики аналитики и научитесь строить отчёты для продукта."}
 ]
 
-# Получение эмбеддингов с помощью OpenAI
+# Получение эмбеддингов от OpenAI
 def get_embedding(text, model="text-embedding-ada-002"):
-    response = openai.Embedding.create(input=text, model=model)
+    response = openai.Embedding.create(input=[text], model=model)
     return np.array(response['data'][0]['embedding'])
 
-# Создание векторной базы данных
+# Построение базы данных для поиска
 def build_vector_db(courses):
     descriptions = [course["description"] for course in courses]
     embeddings = [get_embedding(desc) for desc in descriptions]
@@ -34,29 +38,32 @@ def build_vector_db(courses):
     index = faiss.IndexFlatL2(dimension)
     index.add(np.array(embeddings).astype('float32'))
 
-    return index, embeddings
+    return index, courses
 
 # Рекомендация курса
 def recommend_course(user_query, index, courses):
     query_embedding = get_embedding(user_query).astype('float32').reshape(1, -1)
     distances, indices = index.search(query_embedding, 1)
     recommended_course = courses[indices[0][0]]
-    return recommended_course, distances[0][0]
+    return recommended_course
 
-# Создание интерфейса Streamlit
+# Интерфейс Streamlit
 st.title("Рекомендатор курсов")
-st.write("Введите свои интересы, и мы подберём для вас подходящий курс!")
+st.write("Введите, что вы хотите изучить, и мы найдём лучший курс для вас!")
 
-user_input = st.text_input("Что вы хотите изучить?", placeholder="Например, машинное обучение, SQL, анализ данных...")
+user_input = st.text_input("Что вы хотите изучить?", placeholder="Например: нейронные сети, SQL, анализ данных...")
 
 if user_input:
     with st.spinner("Ищем подходящий курс..."):
-        # Построение векторной базы
-        index, _ = build_vector_db(courses)
+        try:
+            # Построение базы данных
+            index, courses_data = build_vector_db(courses)
 
-        # Рекомендация курса
-        recommended_course, distance = recommend_course(user_input, index, courses)
+            # Рекомендация курса
+            recommended_course = recommend_course(user_input, index, courses_data)
 
-        # Вывод результата
-        st.success(f"Мы рекомендуем вам курс: **{recommended_course['name']}**")
-        st.write(f"Описание: {recommended_course['description']}")
+            # Отображение результата
+            st.success(f"Мы рекомендуем курс: **{recommended_course['name']}**")
+            st.write(f"Описание: {recommended_course['description']}")
+        except Exception as e:
+            st.error(f"Произошла ошибка: {e}")
